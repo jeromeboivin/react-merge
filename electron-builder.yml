@@ -1,0 +1,17 @@
+appId: app.react-merge
+productName: React Merge
+executableName: react-merge
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**
+  - package.json
+  # Window icon, loaded by path from the main process.
+  - resources/icons/linux/256x256.png
+# Package the Electron runtime already in node_modules (no download).
+electronDist: node_modules/electron/dist
+linux:
+  target: dir
+  icon: resources/icons/linux
+  category: Development

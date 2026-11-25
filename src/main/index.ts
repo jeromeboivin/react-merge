@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, type IpcMainEvent } from 'electron'
 import { existsSync, statSync } from 'fs'
 import { join, resolve } from 'path'
+import appIcon from '../../resources/icons/linux/256x256.png?asset'
 import { APP_NAME, errorReport, parseArgs, usage, type LaunchOptions } from '../shared/args'
 import type { Command, MenuState, Preferences, Session } from '../shared/ipc'
 import { loadFile, saveFile } from './fileio'
@@ -46,6 +47,7 @@ function createWindow(options: LaunchOptions): BrowserWindow {
     minHeight: 420,
     show: false,
     title: APP_NAME,
+    icon: appIcon,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0b1016' : '#f4f5f7',
     autoHideMenuBar: false,
     webPreferences: {

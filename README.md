@@ -18,6 +18,19 @@ npx electron .                                      # file chooser
 
 On Linux, if Electron stops with a sandbox error, add `--no-sandbox` before the `.`.
 
+## Install on Linux
+
+```bash
+nvm use 22
+make                                  # builds dist/linux-unpacked
+make install                          # into ~/.local (no root needed)
+sudo make install PREFIX=/usr/local   # or system-wide
+```
+
+This installs the app under `PREFIX/lib/react-merge`, a `react-merge` launcher in
+`PREFIX/bin`, a desktop entry, and the icon at the standard sizes. `make uninstall` (with the same
+`PREFIX`) removes them; `make clean` removes the build output. Packagers can set `DESTDIR`.
+
 ## Command line
 
 `npx electron . -h` lists all the options:
