@@ -6,3 +6,4 @@ out
 *.log*
 test-results
 *.tsbuildinfo
+bin

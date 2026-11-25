@@ -1,9 +1,0 @@
-#!/bin/sh
-# Launch React Merge from a checkout (after `npm run build`). See `react-merge -h` for the arguments.
-here=$(dirname "$(readlink -f "$0")")
-root=$(dirname "$here")
-electron="$root/node_modules/electron/dist/electron"
-sandbox=""
-# Without a setuid chrome-sandbox (as in a plain npm install), Chromium needs --no-sandbox.
-if [ ! -u "$root/node_modules/electron/dist/chrome-sandbox" ]; then sandbox="--no-sandbox"; fi
-exec "$electron" $sandbox "$root" "$@"

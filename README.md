@@ -9,16 +9,18 @@ self-contained React module, so it can also be embedded in another Electron app.
 nvm use 22
 npm install
 npm run build
-bin/react-merge left.txt right.txt                   # diff
-bin/react-merge base.txt left.txt right.txt out.txt  # merge into out.txt
-bin/react-merge                                      # file chooser
+npx electron . left.txt right.txt                   # diff
+npx electron . base.txt left.txt right.txt out.txt  # merge into out.txt
+npx electron .                                      # file chooser
 ```
 
 `npm run dev -- <args>` runs the app with hot reload.
 
+On Linux, if Electron stops with a sandbox error, add `--no-sandbox` before the `.`.
+
 ## Command line
 
-`bin/react-merge -h` lists all the options:
+`npx electron . -h` lists all the options:
 
 | Option                        | Meaning                                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -32,7 +34,7 @@ It can be used as an external merge tool. For example, with git:
 
 ```bash
 git config --global merge.tool react-merge
-git config --global mergetool.react-merge.cmd '/path/to/react-merge/bin/react-merge "$BASE" "$LOCAL" "$REMOTE" "$MERGED"'
+git config --global mergetool.react-merge.cmd '/path/to/react-merge/node_modules/.bin/electron /path/to/react-merge "$BASE" "$LOCAL" "$REMOTE" "$MERGED"'
 ```
 
 ## Features
@@ -80,8 +82,13 @@ palette (`assets/main.css`). Dependencies: `@tanstack/react-virtual`, `refractor
 ```bash
 npm test            # engine, CLI and encoding unit tests (vitest)
 npm run test:e2e    # drives the built app with Playwright (needs `npm run build` first)
+npm run test:e2e:headless  # the same without a screen, under a virtual X server (xvfb-run)
 npm run lint && npm run typecheck
 ```
+
+Electron needs a display, so headless runs (servers, CI) use Xvfb: install it with
+`sudo apt-get install xvfb`. The GitHub Actions workflow (`.github/workflows/ci.yml`) runs lint,
+typecheck, unit tests, the build and the headless end-to-end tests on every push.
 
 The e2e tests also save screenshots of both themes, the single-pane layout and the dialogs to
 `test-results/screens/`.

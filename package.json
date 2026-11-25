@@ -4,9 +4,6 @@
   "description": "Visual 2-way diff and 3-way merge tool (Electron/React)",
   "main": "./out/main/index.js",
   "private": true,
-  "bin": {
-    "react-merge": "./bin/react-merge"
-  },
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
@@ -19,7 +16,8 @@
     "build:linux": "electron-vite build && electron-builder --linux",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:e2e": "npx playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:headless": "xvfb-run --auto-servernum --server-args=\"-screen 0 1920x1080x24\" playwright test"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

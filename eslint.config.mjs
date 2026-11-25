@@ -8,7 +8,7 @@ import eslintPluginReactRefresh from 'eslint-plugin-react-refresh'
 
 // Strict type-checked presets, no `any`.
 export default defineConfig(
-  { ignores: ['**/node_modules', '**/dist', '**/out', 'resources/**', 'bin/**'] },
+  { ignores: ['**/node_modules', '**/dist', '**/out', 'resources/**'] },
   { linterOptions: { reportUnusedDisableDirectives: 'error' } },
   ...toolkit.configs.base,
   {

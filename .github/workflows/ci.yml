@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      # The Electron binary is downloaded by its install script, which npm may skip.
+      - run: node node_modules/electron/install.js
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx electron-vite build
+      # Electron needs a display: run the end-to-end tests under a virtual X server.
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
+      - run: npm run test:e2e:headless
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
