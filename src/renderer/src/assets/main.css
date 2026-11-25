@@ -1,0 +1,230 @@
+@import 'tailwindcss';
+
+/* Density scale shared with the host app, so the merge module drops in without restyling. */
+@theme static {
+  --text-ui: 14px;
+  --text-ui--line-height: 20px;
+  --text-meta: 12px;
+  --text-meta--line-height: 16px;
+  --size-icon: 16px;
+  --size-icon-sm: 14px;
+  --radius-control: 6px;
+  --radius-menu: 12px;
+}
+
+/* Colour tokens as Tailwind colours (bg-surface, text-text-muted, border-border, ...). */
+@theme inline {
+  --color-brand: var(--color-brand);
+  --color-brand-light: var(--color-brand-light);
+  --color-brand-soft: var(--color-brand-soft);
+  --color-brand-faint: var(--color-brand-faint);
+  --color-surface: var(--color-surface);
+  --color-surface-light: var(--color-surface-light);
+  --color-surface-lighter: var(--color-surface-lighter);
+  --color-surface-white: var(--color-surface-white);
+  --color-surface-warm: var(--color-surface-warm);
+  --color-text: var(--color-text);
+  --color-title: var(--color-title);
+  --color-subtitle: var(--color-subtitle);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+  --color-border-light: var(--color-border-light);
+  --color-success: var(--color-success);
+  --color-error: var(--color-error);
+  --color-warning: var(--color-warning);
+  --color-input-bg: var(--color-input-bg);
+  --color-input-border: var(--color-input-border);
+  --color-input-focus: var(--color-input-focus);
+  --color-m-base: var(--m-base);
+  --color-m-left: var(--m-left);
+  --color-m-right: var(--m-right);
+  --color-m-conflict: var(--m-conflict);
+  --color-m-edit: var(--m-edit);
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../../../../resources/fonts/inter-latin-opsz-normal.woff2') format('woff2-variations');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../../../../resources/fonts/inter-latin-ext-opsz-normal.woff2')
+    format('woff2-variations');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Fallback values (light theme); the active theme overrides them at runtime (theme.ts). */
+:root {
+  --color-brand: #4930c1;
+  --color-brand-light: #5437df;
+  --color-brand-soft: #eeeafc;
+  --color-brand-faint: #f5f3fe;
+  --color-surface: #f4f5f7;
+  --color-surface-light: #eaecf0;
+  --color-surface-lighter: #d9dce3;
+  --color-surface-white: #ffffff;
+  --color-surface-warm: #f9fafb;
+  --color-text: #0f1115;
+  --color-title: #3d3d3d;
+  --color-subtitle: #4b5563;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+  --color-border: #d1d5db;
+  --color-border-light: #e5e7eb;
+  --color-success: #16a34a;
+  --color-error: #ef0a39;
+  --color-warning: #ffb600;
+  --color-scrim: rgb(0 0 0 / 0.5);
+  --color-on-brand: #ffffff;
+  --color-input-bg: #ffffff;
+  --color-input-border: #d1d5db;
+  --color-input-focus: #4930c1;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --font-body: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /*
+   * Merge palette: one hue per source, derived from the brand palette (purple = left/"theirs"
+   * side, teal = right, amber = base). The tinted backgrounds mix into the editor surface so
+   * they follow light and dark themes.
+   */
+  --m-base: #d99a00;
+  --m-left: #4930c1;
+  --m-right: #0e9bb3;
+  --m-conflict: #ef0a39;
+  --m-edit: #16a34a;
+  --m-editor-bg: var(--color-surface-white);
+  --m-bg-base: color-mix(in srgb, var(--m-base) 13%, var(--m-editor-bg));
+  --m-bg-left: color-mix(in srgb, var(--m-left) 9%, var(--m-editor-bg));
+  --m-bg-right: color-mix(in srgb, var(--m-right) 11%, var(--m-editor-bg));
+  --m-bg-conflict: color-mix(in srgb, var(--m-conflict) 9%, var(--m-editor-bg));
+  --m-bg-edit: color-mix(in srgb, var(--m-edit) 11%, var(--m-editor-bg));
+  --m-bg-change: color-mix(in srgb, var(--color-text-muted) 14%, var(--m-editor-bg));
+  --m-hl-base: color-mix(in srgb, var(--m-base) 34%, var(--m-editor-bg));
+  --m-hl-left: color-mix(in srgb, var(--m-left) 24%, var(--m-editor-bg));
+  --m-hl-right: color-mix(in srgb, var(--m-right) 30%, var(--m-editor-bg));
+  --m-band: color-mix(in srgb, var(--color-text-muted) 38%, var(--m-editor-bg));
+  --m-gutter: var(--color-surface);
+  --m-selection: color-mix(in srgb, var(--color-brand) 22%, transparent);
+  --m-current: var(--color-text);
+}
+
+:root[data-scheme='dark'] {
+  --m-base: #ffc933;
+  --m-left: #8f7cff;
+  --m-right: #24b7cf;
+  --m-conflict: #f43160;
+  --m-edit: #3fb950;
+  --m-editor-bg: #10161d;
+  --m-bg-base: color-mix(in srgb, var(--m-base) 12%, var(--m-editor-bg));
+  --m-bg-left: color-mix(in srgb, var(--m-left) 16%, var(--m-editor-bg));
+  --m-bg-right: color-mix(in srgb, var(--m-right) 14%, var(--m-editor-bg));
+  --m-bg-conflict: color-mix(in srgb, var(--m-conflict) 16%, var(--m-editor-bg));
+  --m-bg-edit: color-mix(in srgb, var(--m-edit) 14%, var(--m-editor-bg));
+  --m-hl-base: color-mix(in srgb, var(--m-base) 34%, var(--m-editor-bg));
+  --m-hl-left: color-mix(in srgb, var(--m-left) 40%, var(--m-editor-bg));
+  --m-hl-right: color-mix(in srgb, var(--m-right) 36%, var(--m-editor-bg));
+  --m-band: color-mix(in srgb, var(--color-text-muted) 30%, var(--m-editor-bg));
+  --m-gutter: var(--color-surface);
+  --m-selection: color-mix(in srgb, var(--color-brand-light) 40%, transparent);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-ui);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-lighter);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ── Text panes ── */
+
+.m-text {
+  white-space: pre;
+  font-variant-ligatures: none;
+}
+
+.m-ws-space,
+.m-ws-tab {
+  position: relative;
+}
+.m-ws-space::before,
+.m-ws-tab::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--color-text-muted);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.m-ws-space::before {
+  content: '·';
+}
+.m-ws-tab::before {
+  content: '→';
+}
+
+.m-caret {
+  animation: m-blink 1.06s steps(1) infinite;
+}
+@keyframes m-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Syntax colours (Prism token classes emitted by refractor); theme.ts sets the palette. */
+.m-syntax-off .token {
+  color: inherit !important;
+  font-style: normal !important;
+}
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  font-style: italic;
+}
