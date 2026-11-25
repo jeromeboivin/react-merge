@@ -125,7 +125,11 @@ function joins(group: readonly SideHunk[], start: number, end: number, it: SideH
  * starts later also ends later); a deletion ending on the same line as, or nested inside, the
  * other's is a conflict. Cut the deletions at each other's ends in the first case.
  */
-function splitOverlappingDeletions(left: Hunk[], right: Hunk[]): [Hunk[], Hunk[]] {
+function splitOverlappingDeletions(
+  left: Hunk[],
+  right: Hunk[],
+  baseLength: number
+): [Hunk[], Hunk[]] {
   const isDeletion = (h: Hunk): boolean => h.aStart < h.aEnd && h.bStart === h.bEnd
   const cutsL = new Set<number>()
   const cutsR = new Set<number>()
@@ -135,7 +139,11 @@ function splitOverlappingDeletions(left: Hunk[], right: Hunk[]): [Hunk[], Hunk[]
       if (!isDeletion(b) || !(a.aStart < b.aEnd && b.aStart < a.aEnd)) continue
       if (a.aStart === b.aStart && a.aEnd === b.aEnd) continue
       const [first, second] = a.aStart <= b.aStart ? [a, b] : [b, a]
-      const split = a.aStart === b.aStart || second.aEnd > first.aEnd
+      // Ending together is fine at the end of the file (nothing follows to disagree on).
+      const split =
+        a.aStart === b.aStart ||
+        second.aEnd > first.aEnd ||
+        (a.aEnd === b.aEnd && a.aEnd === baseLength)
       if (!split) continue
       cutsL.add(b.aStart).add(b.aEnd)
       cutsR.add(a.aStart).add(a.aEnd)
@@ -164,7 +172,8 @@ export function diff3(
 ): MergeChunk[] {
   const [lh, rh] = splitOverlappingDeletions(
     lineDiff(base, left, method),
-    lineDiff(base, right, method)
+    lineDiff(base, right, method),
+    base.length
   )
   const items: SideHunk[] = [
     ...lh.map((h) => ({ side: 'left' as const, h })),
@@ -219,13 +228,224 @@ export function diff3(
     let kind: MergeChunkKind
     if (hasLeft && hasRight) kind = sameLines(left, lr, right, rr, method) ? 'both' : 'conflict'
     else kind = hasLeft ? 'left' : 'right'
-    chunks.push({ kind, base: { start, end }, left: lr, right: rr })
+    if (kind === 'conflict')
+      chunks.push(...splitConflict(base, left, right, { start, end }, lr, rr, method))
+    else chunks.push({ kind, base: { start, end }, left: lr, right: rr })
     deltaL = nextDeltaL
     deltaR = nextDeltaR
     pos = end
   }
   pushEqual(base.length)
-  return chunks
+  return splitShrinkingBoth(chunks)
+}
+
+/**
+ * The same change made on both sides that replaces base lines with fewer lines reads as two
+ * changes: the replacement, then the deletion of the remaining base lines.
+ */
+function splitShrinkingBoth(chunks: MergeChunk[]): MergeChunk[] {
+  return chunks.flatMap((c) => {
+    const n = c.base.end - c.base.start
+    const m = c.left.end - c.left.start
+    if (c.kind !== 'both' || m === 0 || n <= m) return [c]
+    const cut = c.base.start + m
+    return [
+      { ...c, base: { start: c.base.start, end: cut } },
+      {
+        kind: 'both' as const,
+        base: { start: cut, end: c.base.end },
+        left: { start: c.left.end, end: c.left.end },
+        right: { start: c.right.end, end: c.right.end }
+      }
+    ]
+  })
+}
+
+/**
+ * Refine a conflict by aligning the two sides' texts against each other: lines both sides have
+ * become changes common to both, a stretch only one side has becomes that side's change, and
+ * only stretches where both sides differ stay conflicts. The replaced base lines go with the
+ * first piece involving both sides. Without any shared line the whole region stays one conflict.
+ */
+function splitConflict(
+  baseLines: readonly Line[],
+  left: readonly Line[],
+  right: readonly Line[],
+  base: Range,
+  lr: Range,
+  rr: Range,
+  method: ComparisonMethod
+): MergeChunk[] {
+  const interner = new Interner()
+  const ids = (lines: readonly Line[], r: Range): Int32Array =>
+    Int32Array.from({ length: r.end - r.start }, (_, k) =>
+      interner.id(lineKey(lines[r.start + k], method))
+    )
+  const hunks = diffSequences(ids(left, lr), ids(right, rr))
+  const whole: MergeChunk = { kind: 'conflict', base, left: lr, right: rr }
+  const shared = lr.end - lr.start - hunks.reduce((n, h) => n + h.aEnd - h.aStart, 0)
+  if (shared === 0) return [whole]
+
+  const pieces: Piece[] = []
+  let l = 0
+  let r = 0
+  const at = (from: number, to: number, origin: number): Range => ({
+    start: origin + from,
+    end: origin + to
+  })
+  for (const h of [...hunks, null]) {
+    const aStart = h ? h.aStart : lr.end - lr.start
+    const bStart = h ? h.bStart : rr.end - rr.start
+    if (aStart > l)
+      pieces.push({ kind: 'both', left: at(l, aStart, lr.start), right: at(r, bStart, rr.start) })
+    if (!h) break
+    const kind: MergeChunkKind =
+      h.aEnd > h.aStart && h.bEnd > h.bStart ? 'conflict' : h.aEnd > h.aStart ? 'left' : 'right'
+    pieces.push({
+      kind,
+      left: at(h.aStart, h.aEnd, lr.start),
+      right: at(h.bStart, h.bEnd, rr.start)
+    })
+    l = h.aEnd
+    r = h.bEnd
+  }
+  const key = (lines: readonly Line[], i: number): number => interner.id(lineKey(lines[i], method))
+  return placeBaseByContent(pieces, base, baseLines, left, right, key) ?? placeBase(pieces, base)
+}
+
+/**
+ * Give base lines to the pieces whose text they match (left first, then right), keeping order;
+ * unmatched base lines go with the piece of the previous matched line. Each piece is then
+ * classified against its base: a side still equal to the base did not change it. Returns null
+ * when no base line matches, or the matches cross, so the positional rule applies instead.
+ */
+function placeBaseByContent(
+  pieces: Piece[],
+  base: Range,
+  baseLines: readonly Line[],
+  left: readonly Line[],
+  right: readonly Line[],
+  key: (lines: readonly Line[], i: number) => number
+): MergeChunk[] | null {
+  const n = len(base)
+  if (n === 0) return null
+  const owner = new Array<number>(n).fill(-1)
+  const ownerOf = (side: 'left' | 'right', line: number): number =>
+    pieces.findIndex((p) => line >= p[side].start && line < p[side].end)
+  for (const [side, lines] of [
+    ['left', left],
+    ['right', right]
+  ] as const) {
+    const first = pieces[0][side].start
+    const last = pieces[pieces.length - 1][side].end
+    const a = Int32Array.from({ length: n }, (_, k) => key(baseLines, base.start + k))
+    const b = Int32Array.from({ length: last - first }, (_, k) => key(lines, first + k))
+    let i = 0
+    let j = 0
+    for (const h of [...diffSequences(a, b), null]) {
+      const stop = h ? h.aStart : n
+      while (i < stop) {
+        if (owner[i] < 0) owner[i] = ownerOf(side, first + j)
+        i++
+        j++
+      }
+      if (!h) break
+      i = h.aEnd
+      j = h.bEnd
+    }
+  }
+  if (owner.every((o) => o < 0)) return null
+  let prev = owner.find((o) => o >= 0) ?? 0
+  for (let k = 0; k < n; k++) {
+    if (owner[k] < 0) owner[k] = prev
+    if (owner[k] < prev) return null
+    prev = owner[k]
+  }
+  const same = (lines: readonly Line[], r: Range, b: Range): boolean =>
+    len(r) === len(b) &&
+    Array.from({ length: len(r) }, (_, k) => k).every(
+      (k) => key(lines, r.start + k) === key(baseLines, b.start + k)
+    )
+  let cursor = base.start
+  return pieces.map((p, idx) => {
+    const count = owner.filter((o) => o === idx).length
+    const b = { start: cursor, end: cursor + count }
+    cursor += count
+    const l = same(left, p.left, b)
+    const r = same(right, p.right, b)
+    const both =
+      len(p.left) === len(p.right) &&
+      Array.from({ length: len(p.left) }, (_, k) => k).every(
+        (k) => key(left, p.left.start + k) === key(right, p.right.start + k)
+      )
+    const kind: MergeChunkKind =
+      l && r ? 'equal' : both ? 'both' : l ? 'right' : r ? 'left' : 'conflict'
+    return { ...p, kind, base: b }
+  })
+}
+
+interface Piece {
+  kind: MergeChunkKind
+  left: Range
+  right: Range
+}
+
+const len = (r: Range): number => r.end - r.start
+
+/**
+ * Give each piece its share of the replaced base lines, in order. Shared pieces take base lines
+ * one for one; base lines beyond the shared lines are taken as early as possible by the other
+ * pieces, and a one-sided piece that takes base lines becomes a conflict (one side replaces them,
+ * the other deletes them). Pure insertions (no base lines) only split in the simple shapes: at
+ * most one non-shared piece, or a conflict followed by a final one-sided piece; otherwise the
+ * leading shared pieces are kept and the rest stays one conflict.
+ */
+function placeBase(pieces: Piece[], base: Range): MergeChunk[] {
+  if (len(base) === 0) {
+    const others = pieces.filter((p) => p.kind !== 'both')
+    const last = pieces[pieces.length - 1]
+    const simple =
+      others.length <= 1 ||
+      (others.length === 2 &&
+        others[0].kind === 'conflict' &&
+        others[1].kind !== 'conflict' &&
+        others[1] === last)
+    let kept = pieces
+    if (!simple) {
+      const lead = pieces.findIndex((p) => p.kind !== 'both')
+      const rest = pieces.slice(lead)
+      kept = [
+        ...pieces.slice(0, lead),
+        {
+          kind: 'conflict',
+          left: { start: rest[0].left.start, end: rest[rest.length - 1].left.end },
+          right: { start: rest[0].right.start, end: rest[rest.length - 1].right.end }
+        }
+      ]
+    }
+    return kept.map((p) => ({ ...p, base: { start: base.start, end: base.start } }))
+  }
+  let remaining = len(base)
+  let sharedLeft = pieces.reduce((n, p) => n + (p.kind === 'both' ? len(p.left) : 0), 0)
+  let cursor = base.start
+  const out: MergeChunk[] = pieces.map((p) => {
+    let take: number
+    if (p.kind === 'both') {
+      take = Math.min(len(p.left), remaining)
+      sharedLeft -= len(p.left)
+    } else take = Math.max(0, remaining - sharedLeft)
+    const range = { start: cursor, end: cursor + take }
+    cursor += take
+    remaining -= take
+    const kind: MergeChunkKind = p.kind !== 'both' && take > 0 ? 'conflict' : p.kind
+    return { ...p, kind, base: range }
+  })
+  if (remaining > 0) {
+    const last = out[out.length - 1]
+    last.base = { start: last.base.start, end: base.end }
+    if (last.kind !== 'both') last.kind = 'conflict'
+  }
+  return out
 }
 
 function sameLines(

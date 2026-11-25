@@ -246,3 +246,62 @@ describe('diff3 on touching and overlapping edits', () => {
     })
   }
 })
+
+/**
+ * Same-spot edits that share lines: the shared lines become changes common to both, and the
+ * rest is one-sided or conflicting. Context lines p0 p1 / q0 q1 surround each case;
+ * [base, left, right, expected non-equal chunk kinds].
+ */
+describe('diff3 splits conflicts on shared lines', () => {
+  const wrap = (lines: string[]): Line[] => L(['p0', 'p1', ...lines, 'q0', 'q1'].join('\n') + '\n')
+  const cases: [string, string[], string[], string[], string[]][] = [
+    ['insertion sharing its end', [], ['a'], ['b', 'a'], ['right', 'both']],
+    ['insertion sharing both ends', [], ['a', 'b'], ['a', 'x', 'b'], ['both', 'right', 'both']],
+    ['different middles', [], ['a', 'X', 'b'], ['a', 'Y', 'b'], ['both', 'conflict', 'both']],
+    ['conflict then one side', [], ['a', 'b'], ['x', 'b', 'c'], ['conflict', 'both', 'right']],
+    ['one side on each end', [], ['a', 'b'], ['b', 'c'], ['conflict']],
+    ['two conflicts', [], ['a', 'b', 'c'], ['x', 'b', 'y'], ['conflict']],
+    ['swapped lines', [], ['a', 'b'], ['b', 'a'], ['conflict']],
+    ['shared start then mixed', [], ['a', 'b', 'c'], ['a', 'c', 'b'], ['both', 'conflict']],
+    ['no shared line', [], ['x'], ['y'], ['conflict']],
+    ['replacement sharing its end', ['old'], ['A', 'B'], ['B'], ['left', 'both']],
+    [
+      'replacement, one side on each end',
+      ['old'],
+      ['a', 'b'],
+      ['b', 'c'],
+      ['left', 'both', 'right']
+    ],
+    [
+      'replacement, two conflicts',
+      ['old'],
+      ['a', 'b', 'c'],
+      ['x', 'b', 'y'],
+      ['conflict', 'both', 'conflict']
+    ],
+    [
+      'more base lines than shared ones',
+      ['o1', 'o2'],
+      ['a', 'b'],
+      ['b', 'c'],
+      ['conflict', 'both', 'right']
+    ],
+    ['same shorter replacement on both sides', ['x', 'y', 'u'], ['z'], ['z'], ['both', 'both']],
+    ['same longer replacement on both sides', ['x'], ['z', 'w'], ['z', 'w'], ['both']],
+    ['shorter replacement on one side', ['x', 'y'], ['z'], ['x', 'y'], ['left']]
+  ]
+  for (const [name, b, l, r, kinds] of cases) {
+    it(name, () => {
+      const chunks = diff3(wrap(b), wrap(l), wrap(r), 'lineEndings')
+      expect(chunks.filter((c) => c.kind !== 'equal').map((c) => c.kind)).toEqual(kinds)
+      // The chunks still tile all three files.
+      for (const src of ['base', 'left', 'right'] as const) {
+        let pos = 0
+        for (const c of chunks) {
+          expect(c[src].start).toBe(pos)
+          pos = c[src].end
+        }
+      }
+    })
+  }
+})

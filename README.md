@@ -95,7 +95,14 @@ The e2e tests also save screenshots of both themes, the single-pane layout and t
 - **3-way chunks**: when one side's change ends where the other side's starts, they stay apart
   only if the first is a deletion or both are replacements; otherwise they form a conflict.
   Overlapping deletions are split line by line into one-side and "common to both" parts when
-  staggered or starting on the same line, and conflict otherwise.
+  staggered, starting on the same line, or ending together at the end of the file; otherwise they
+  conflict.
+- **Shared lines inside a conflict**: the two sides' texts are aligned against each other. Lines
+  both have become changes common to both, a stretch only one side has becomes that side's
+  change, and only stretches where both differ stay conflicts. The replaced base lines go with
+  the piece whose text they match (a side still equal to the base didn't change it), otherwise
+  one for one with the shared pieces. Pure insertions only split in simple shapes (at most one
+  non-shared piece, or a conflict followed by a final one-sided piece).
 - An undecided conflict starts with base, left and right text all included.
 - With white space ignored, unchanged regions show the reference file's text in every read-only
   pane (base in a merge, left in a diff), and the merge takes the base text.
@@ -106,5 +113,5 @@ The e2e tests also save screenshots of both themes, the single-pane layout and t
 ## Known limitations
 
 - Text only: no image comparison.
-- When lines repeat near a change (several identical `{` or `foo();` lines), some 3-way cases
-  are reported as one conflict where a finer split would be possible.
+- When the right file repeats a line near a change, a few 3-way cases are still grouped
+  differently (about 1 in 30 random merges in testing).
