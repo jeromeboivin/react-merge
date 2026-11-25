@@ -3,6 +3,16 @@
 A visual 2-way diff and 3-way merge tool in Electron, TypeScript and React. The merge view is a
 self-contained React module, so it can also be embedded in another Electron app.
 
+**Compare two files**: side-by-side panes joined by connector bands, with syntax highlighting and
+word-level differences.
+
+![Two-file diff](docs/screenshots/diff.png)
+
+**Merge three files**: left, base and right above an editable result. Conflicts are outlined in
+red; the buttons beside each change pick which side's text to keep.
+
+![Three-file merge](docs/screenshots/merge.png)
+
 ## Run
 
 ```bash
