@@ -2,6 +2,13 @@
   "name": "react-merge",
   "version": "0.1.0",
   "description": "Visual 2-way diff and 3-way merge tool (Electron/React)",
+  "homepage": "https://github.com/jeromeboivin/react-merge",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeromeboivin/react-merge.git"
+  },
+  "author": "jeromeboivin",
+  "desktopName": "react-merge.desktop",
   "main": "./out/main/index.js",
   "private": true,
   "scripts": {
@@ -13,7 +20,9 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
-    "build:linux": "electron-vite build && electron-builder --linux",
+    "dist:linux": "electron-vite build && electron-builder --linux deb --x64 --publish never",
+    "dist:win": "electron-vite build && electron-builder --win --x64 --publish never",
+    "dist:mac": "electron-vite build && electron-builder --mac --arm64 --x64 --publish never",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

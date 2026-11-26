@@ -13,6 +13,25 @@ red; the buttons beside each change pick which side's text to keep.
 
 ![Three-file merge](docs/screenshots/merge.png)
 
+## Download
+
+Installers for each [release](https://github.com/jeromeboivin/react-merge/releases/latest):
+
+| Platform                      | File                                               | Install                                                                  |
+| ----------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------ |
+| Linux (Debian, Ubuntu)        | `react-merge_X.Y.Z_amd64.deb`                      | `sudo apt install ./react-merge_X.Y.Z_amd64.deb`, then run `react-merge` |
+| Windows                       | `react-merge-X.Y.Z-setup-x64.exe`                  | run the installer (or unpack the `win-x64.zip`)                          |
+| macOS (Apple Silicon / Intel) | `react-merge-X.Y.Z-mac-arm64.dmg` / `-mac-x64.dmg` | open it and drag the app to Applications                                 |
+
+The builds are not signed with a publisher certificate, so the system warns on first launch:
+
+- **Windows**: SmartScreen says it protected your PC; choose _More info_, then _Run anyway_.
+- **macOS**: the app is signed ad hoc but not notarized. Open it once, then allow it in _System
+  Settings → Privacy & Security_ (_Open Anyway_), or clear the download flag:
+  `xattr -dr com.apple.quarantine "/Applications/React Merge.app"`.
+
+`SHA256SUMS.txt` in each release lists the files' checksums.
+
 ## Run
 
 ```bash
@@ -115,6 +134,27 @@ typecheck, unit tests, the build and the headless end-to-end tests on every push
 
 The e2e tests also save screenshots of both themes, the single-pane layout and the dialogs to
 `test-results/screens/`.
+
+## Releases
+
+```bash
+scripts/release.sh patch          # or minor, major, or an exact version such as 1.2.0 or 1.2.0-rc.1
+scripts/release.sh minor --dry-run
+```
+
+The script checks that `master` is clean and not behind `origin`, runs lint, typecheck and unit
+tests, asks for confirmation, then bumps the version in `package.json`, commits `Release vX.Y.Z`,
+tags `vX.Y.Z` and pushes both. The tag starts the Release workflow (`.github/workflows/release.yml`),
+which builds on GitHub's runners:
+
+- Linux: `.deb` (x64)
+- Windows: NSIS installer and zip (x64)
+- macOS: dmg and zip, for arm64 and x64
+
+and publishes them, with generated notes and checksums, as the GitHub release for the tag (a
+pre-release when the version has a `-` suffix). To build one platform's packages locally:
+`npm run dist:linux`, `npm run dist:win` (on Linux, needs Wine) or `npm run dist:mac` (macOS only).
+The output goes to `dist/`.
 
 ## Diff and merge rules
 

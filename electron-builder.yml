@@ -1,6 +1,7 @@
 appId: app.react-merge
 productName: React Merge
 executableName: react-merge
+copyright: Copyright © React Merge contributors
 directories:
   output: dist
   buildResources: resources
@@ -9,9 +10,44 @@ files:
   - package.json
   # Window icon, loaded by path from the main process.
   - resources/icons/linux/256x256.png
-# Package the Electron runtime already in node_modules (no download).
-electronDist: node_modules/electron/dist
+# No native modules: nothing to rebuild for the Electron runtime.
+npmRebuild: false
+artifactName: ${name}-${version}-${os}-${arch}.${ext}
+# Releases are published by the workflow, and the app has no auto-updater.
+publish: null
+
 linux:
-  target: dir
+  target: deb
   icon: resources/icons/linux
   category: Development
+  synopsis: Visual diff and merge tool
+  description: Compare two text files side by side, or merge three with conflict resolution.
+  maintainer: jeromeboivin
+  # Files from a file manager arrive as paths, not URLs.
+  executableArgs: ['%F']
+  desktop:
+    entry:
+      GenericName: Diff and Merge Tool
+      Keywords: diff;merge;compare;conflict;
+deb:
+  artifactName: ${name}_${version}_${arch}.${ext}
+
+win:
+  target:
+    - nsis
+    - zip
+  icon: resources/icons/linux/256x256.png
+nsis:
+  artifactName: ${name}-${version}-setup-${arch}.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+mac:
+  target:
+    - dmg
+    - zip
+  icon: resources/icons/mac/icon.png
+  category: public.app-category.developer-tools
+  # No Apple Developer certificate: sign ad hoc, which Apple Silicon requires to run the app at all.
+  identity: '-'
+  hardenedRuntime: false

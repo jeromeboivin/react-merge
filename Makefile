@@ -40,7 +40,8 @@ node_modules/.package-lock.json: package.json package-lock.json | check-node
 
 $(UNPACKED)/$(APP): node_modules/.package-lock.json $(SOURCES) | check-node
 	npm run build
-	npx electron-builder --linux dir --publish never
+	npx electron-builder --linux dir --publish never \
+		-c.electronDist=node_modules/electron/dist
 	@touch $@
 
 install: all
